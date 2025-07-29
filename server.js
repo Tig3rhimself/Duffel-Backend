@@ -1,56 +1,46 @@
+import express from 'express';
+import fetch from 'node-fetch';
+import dotenv from 'dotenv';
 
-const express = require('express');
-const Amadeus = require('amadeus');
-
+dotenv.config();
 const app = express();
-const port = process.env.PORT || 3000;
-
-// Amadeus client
-const amadeus = new Amadeus({
-  clientId: process.env.AMADEUS_API_KEY || 'xgOCgngImrcsPGADO0D4IsMkTgEEJJt1',
-  clientSecret: process.env.AMADEUS_API_SECRET || '7YJQX5MaW3eGxlHRq'
-});
+const PORT = process.env.PORT || 3000;
 
 // Root route
 app.get('/', (req, res) => {
-  res.send('Amadeus Flight API backend is running.');
+  res.send('Duffel Flight API backend is running.');
 });
 
 // Search flights route
 app.get('/api/search-flights', async (req, res) => {
+  const { origin, destination, departureDate, adults } = req.query;
+
   try {
-    const { origin, destination, departureDate, adults } = req.query;
-
-    if (!origin || !destination || !departureDate || !adults) {
-      return res.status(400).json({ error: 'Missing required parameters.' });
-    }
-
-    const response = await amadeus.shopping.flightOffersSearch.get({
-      originLocationCode: origin,
-      destinationLocationCode: destination,
-      departureDate,
-      adults
+    const response = await fetch('https://api.duffel.com/air/offer_requests', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.DUFFEL_API_KEY}`,
+        'Content-Type': 'application/json',
+        'Duffel-Version': 'beta'
+      },
+      body: JSON.stringify({
+        data: {
+          passengers: Array(parseInt(adults) || 1).fill({ type: 'adult' }),
+          slices: [
+            { origin, destination, departure_date: departureDate }
+          ],
+          cabin_class: 'economy'
+        }
+      })
     });
 
-    if (!response.data || response.data.length === 0) {
-      return res.status(404).json({ error: 'No flights found.' });
-    }
-
-    const cheapest = response.data.reduce((prev, curr) =>
-      parseFloat(curr.price.total) < parseFloat(prev.price.total) ? curr : prev
-    );
-
-    res.json({
-      price: cheapest.price,
-      airline: cheapest.validatingAirlineCodes[0],
-      duration: cheapest.itineraries[0].duration
-    });
+    const data = await response.json();
+    res.json(data);
   } catch (error) {
-    console.error(error);
+    console.error('Duffel API error:', error);
     res.status(500).json({ error: 'Failed to fetch flight data.' });
   }
 });
 
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-});
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+export default app;
