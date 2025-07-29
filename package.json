@@ -1,12 +1,13 @@
 {
-  "name": "amadeus-backend",
+  "name": "duffel-backend",
   "version": "1.0.0",
-  "main": "server.js",
+  "type": "module",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
     "express": "^4.18.2",
-    "amadeus": "^9.0.0"
+    "node-fetch": "^3.3.2",
+    "dotenv": "^16.4.1"
   }
 }
